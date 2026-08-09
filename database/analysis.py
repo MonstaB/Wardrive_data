@@ -187,3 +187,18 @@ class DatabaseAnalysis:
 
         return [dict(row) for row in access_points]
 
+    # --------------------------------------------------
+    # MANUFACTURER
+    # --------------------------------------------------
+
+    def get_manufacturer(self, mac_bssid):
+        try:
+            from mac_vendor_lookup import MacLookup
+
+            mac = MacLookup()
+            return mac.lookup(mac_bssid)
+
+        except Exception:
+            return "Unknown"
+
+

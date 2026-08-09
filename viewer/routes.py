@@ -44,6 +44,7 @@ def index():
 def capture_detail(capture_id):
     db = Database()
     queries = DatabaseQueries(db)
+    analysis = DatabaseAnalysis(queries)
 
     capture = queries.get_capture(capture_id)
 
@@ -53,12 +54,21 @@ def capture_detail(capture_id):
 
     observations = queries.get_capture_observations(capture_id)
 
+    manufacturers = {}
+
+    for observation in observations:
+        mac = observation["mac_bssid"]
+
+        if mac not in manufacturers:
+            manufacturers[mac] = analysis.get_manufacturer(mac)
+
     db.close()
 
     return render_template(
         "capture.html",
         capture=capture,
-        observations=observations
+        observations=observations,
+        manufacturers=manufacturers
     )
 
 
@@ -66,7 +76,7 @@ def capture_detail(capture_id):
 def access_point(mac_bssid):
     queries = DatabaseQueries(Database())
     analysis = DatabaseAnalysis(queries)
-
+    manufacturer = analysis.get_manufacturer(mac_bssid)
     summary = analysis.get_access_point_summary(mac_bssid)
     observations = queries.get_access_point_observations(mac_bssid)
 
@@ -76,7 +86,8 @@ def access_point(mac_bssid):
     return render_template(
         "access_point.html",
         summary=summary,
-        observations=observations
+        observations=observations,
+        manufacturer=manufacturer
     )
 
 

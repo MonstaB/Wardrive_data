@@ -1,4 +1,6 @@
 /logs/260808_064957_wardriving.csv
 /logs/260808_065121_wardriving.csv
-logs/260808_065121_wardriving.copy.csv
+/logs/260808_065121_wardriving.copy.csv
+/logs/260809_095553_wardriving.csv
 /wardriving.db
+/import_capture.py

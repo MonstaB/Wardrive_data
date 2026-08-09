@@ -1,50 +1,18 @@
-from database.database import Database
-from database.queries import DatabaseQueries
-from database.analysis import DatabaseAnalysis
+from mac_vendor_lookup import MacLookup
 
+lookup = MacLookup()
 
-db = Database()
-queries = DatabaseQueries(db)
-analysis = DatabaseAnalysis(queries)
+macs = [
+    "00:0F:00:49:3E:5C",
+    "14:49:BC:9D:E3:BA",
+    "B4:63:6F:AE:4D:E9",
+    "34:98:B5:FB:73:47"
+]
 
-mac = "14:49:BC:9D:E3:BA"
+for mac in macs:
+    try:
+        manufacturer = lookup.lookup(mac)
+    except Exception as e:
+        manufacturer = f"ERROR: {e}"
 
-print("\nACCESS POINT SUMMARY")
-summary = analysis.get_access_point_summary(mac)
-
-for key, value in summary.items():
-    print(f"{key}: {value}")
-
-
-print("\nSSID CHANGES")
-for change in analysis.get_ssid_changes(mac):
-    print(change)
-
-
-print("\nAUTHENTICATION CHANGES")
-for change in analysis.get_auth_changes(mac):
-    print(change)
-
-
-print("\nLOCATION HISTORY")
-for location in analysis.get_location_history(mac):
-    print(location)
-
-
-print("\nCHANNEL HISTORY")
-for channel in analysis.get_channel_history(mac):
-    print(channel)
-
-
-print("\nRSSI HISTORY")
-for rssi in analysis.get_rssi_history(mac):
-    print(rssi)
-
-
-print("\nCAPTURE HISTORY")
-for capture in analysis.get_capture_history(mac):
-    print(capture)
-
-
-db.close()
-
+    print(mac, "|", manufacturer)

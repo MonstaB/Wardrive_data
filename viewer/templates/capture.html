@@ -41,6 +41,7 @@
             <th>ID</th>
             <th>BSSID</th>
             <th>SSID</th>
+            <th>Manufacturer</th>
             <th>Type</th>
             <th>Auth</th>
             <th>Time</th>
@@ -67,6 +68,8 @@
             </td>
 
             <td>{{ observation["ssid"] }}</td>
+
+            <td>{{ manufacturers[observation["mac_bssid"]] }}</td>
 
             <td>{{ observation["type"] }}</td>
 
