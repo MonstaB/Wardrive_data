@@ -1,8 +1,10 @@
 # database.py
 import sqlite3
-from pathlib import Path
 import hashlib
+import csv
+from pathlib import Path
 from datetime import datetime
+
 
 DB_NAME = Path(__file__).resolve().parent / "wardriving.db"
 DATABASE_VERSION = 1
@@ -176,9 +178,68 @@ class Database:
                 "reason": "already_imported"
             }
 
-        # Create capture record
-        now = datetime.utcnow().isoformat()
+        observations = []
 
+        with open(path, "r", encoding="utf-8", errors="replace", newline="") as f:
+            reader = csv.reader(f)
+
+            # First row = Bruce metadata
+            metadata = next(reader, None)
+
+            # Second row = column headers
+            headers = next(reader, None)
+
+            if headers is None:
+                raise ValueError("CSV does not contain a header row.")
+
+            expected_headers = [
+                "MAC",
+                "SSID",
+                "AuthMode",
+                "FirstSeen",
+                "Channel",
+                "Frequency",
+                "RSSI",
+                "CurrentLatitude",
+                "CurrentLongitude",
+                "AltitudeMeters",
+                "AccuracyMeters",
+                "RCOIs",
+                "MfgrId",
+                "Type"
+            ]
+
+            if headers != expected_headers:
+                raise ValueError(
+                    f"Unexpected CSV headers: {headers}"
+                )
+
+            for row in reader:
+                if not row:
+                    continue
+
+                if len(row) != len(headers):
+                    continue
+
+                data = dict(zip(headers, row))
+
+                observations.append(data)
+
+        if not observations:
+            raise ValueError("CSV contains no observations.")
+
+        # Get capture times from the actual data
+        timestamps = [
+            row["FirstSeen"]
+            for row in observations
+            if row["FirstSeen"]
+        ]
+
+        started_at = min(timestamps)
+        ended_at = max(timestamps)
+        imported_at = datetime.utcnow().isoformat()
+
+        # Create capture
         cursor = self.conn.execute(
             """
             INSERT INTO captures (
@@ -192,19 +253,96 @@ class Database:
             """,
             (
                 path.name,
-                now,
-                now,
-                now,
+                started_at,
+                ended_at,
+                imported_at,
                 digest
             )
         )
 
         capture_id = cursor.lastrowid
 
+        # Import observations
+        for row in observations:
+
+            mac_bssid = row["MAC"].replace("\\:", ":")
+
+            # Find existing access point
+            access_point = self.conn.execute(
+                """
+                SELECT id
+                FROM access_points
+                WHERE mac_bssid = ?
+                """,
+                (mac_bssid,)
+            ).fetchone()
+
+            # Create access point if it doesn't exist
+            if access_point is None:
+                cursor = self.conn.execute(
+                    """
+                    INSERT INTO access_points (
+                        mac_bssid,
+                        type
+                    )
+                    VALUES (?, ?)
+                    """,
+                    (
+                        mac_bssid,
+                        row["Type"]
+                    )
+                )
+
+                access_point_id = cursor.lastrowid
+
+            else:
+                access_point_id = access_point["id"]
+
+            # Insert observation
+            self.conn.execute(
+                """
+                INSERT INTO observations (
+                    access_point_id,
+                    capture_id,
+                    ssid,
+                    auth_mode,
+                    observed_at,
+                    channel,
+                    frequency,
+                    rssi,
+                    latitude,
+                    longitude,
+                    altitude,
+                    accuracy,
+                    rcois,
+                    mfgrid
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    access_point_id,
+                    capture_id,
+                    row["SSID"],
+                    row["AuthMode"],
+                    row["FirstSeen"],
+                    row["Channel"] or None,
+                    row["Frequency"] or None,
+                    row["RSSI"] or None,
+                    row["CurrentLatitude"] or None,
+                    row["CurrentLongitude"] or None,
+                    row["AltitudeMeters"] or None,
+                    row["AccuracyMeters"] or None,
+                    row["RCOIs"] or None,
+                    row["MfgrId"] or None
+                )
+            )
+
         self.conn.commit()
 
         return {
             "id": capture_id,
             "imported": True,
-            "reason": "new_capture"
+            "reason": "new_capture",
+            "observations": len(observations)
         }
+
