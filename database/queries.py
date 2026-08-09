@@ -7,23 +7,6 @@ class DatabaseQueries:
         self.db = db
 
     # --------------------------------------------------
-    # ACCESS POINT
-    # --------------------------------------------------
-
-    def get_access_point(self, mac_bssid):
-        return self.db.conn.execute(
-            """
-            SELECT
-                id,
-                mac_bssid,
-                type
-            FROM access_points
-            WHERE mac_bssid = ?
-            """,
-            (mac_bssid,)
-        ).fetchone()
-
-    # --------------------------------------------------
     # CAPTURE
     # --------------------------------------------------
 
@@ -42,6 +25,63 @@ class DatabaseQueries:
             """,
             (capture_id,)
         ).fetchone()
+
+    # --------------------------------------------------
+    # ACCESS POINT
+    # --------------------------------------------------
+
+    def get_access_point(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT
+                id,
+                mac_bssid,
+                type
+            FROM access_points
+            WHERE mac_bssid = ?
+            """,
+            (mac_bssid,)
+        ).fetchone()
+
+    # --------------------------------------------------
+    # SSIDS USED BY ACCESS POINT
+    # --------------------------------------------------
+
+    def get_access_point_ssids(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT
+                o.ssid
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+              AND o.ssid IS NOT NULL
+              AND o.ssid != ''
+            ORDER BY o.ssid
+            """,
+            (mac_bssid,)
+        ).fetchall()
+
+    # --------------------------------------------------
+    # ACCESS POINTS IN CAPTURE
+    # --------------------------------------------------
+
+    def get_capture_access_points(self, capture_id):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT
+                ap.id,
+                ap.mac_bssid,
+                ap.type
+            FROM access_points ap
+            JOIN observations o
+                ON o.access_point_id = ap.id
+            WHERE o.capture_id = ?
+            ORDER BY ap.mac_bssid
+            """,
+            (capture_id,)
+        ).fetchall()
 
     # --------------------------------------------------
     # OBSERVATIONS FOR ACCESS POINT
@@ -78,6 +118,80 @@ class DatabaseQueries:
         ).fetchall()
 
     # --------------------------------------------------
+    # FIRST OBSERVATION
+    # --------------------------------------------------
+
+    def get_first_observation(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT
+                o.*
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+            ORDER BY o.observed_at ASC
+            LIMIT 1
+            """,
+            (mac_bssid,)
+        ).fetchone()
+
+    # --------------------------------------------------
+    # LAST OBSERVATION
+    # --------------------------------------------------
+
+    def get_last_observation(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT
+                o.*
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+            ORDER BY o.observed_at DESC
+            LIMIT 1
+            """,
+            (mac_bssid,)
+        ).fetchone()
+
+    # --------------------------------------------------
+    # OBSERVATION COUNT
+    # --------------------------------------------------
+
+    def get_observation_count(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+            """,
+            (mac_bssid,)
+        ).fetchone()["count"]
+
+    # --------------------------------------------------
+    # OBSERVATIONS IN CAPTURE
+    # --------------------------------------------------
+
+    def get_capture_observations(self, capture_id):
+        return self.db.conn.execute(
+            """
+            SELECT
+                o.*,
+                ap.mac_bssid,
+                ap.type
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE o.capture_id = ?
+            ORDER BY o.observed_at
+            """,
+            (capture_id,)
+        ).fetchall()
+
+    # --------------------------------------------------
     # ALL ACCESS POINTS
     # --------------------------------------------------
 
@@ -101,13 +215,17 @@ class DatabaseQueries:
         return self.db.conn.execute(
             """
             SELECT
-                id,
-                filename,
-                started_at,
-                ended_at,
-                imported_at
-            FROM captures
-            ORDER BY started_at
+                c.id,
+                c.filename,
+                c.started_at,
+                c.ended_at,
+                c.imported_at,
+                COUNT(o.id) AS observation_count
+            FROM captures c
+            LEFT JOIN observations o
+                ON o.capture_id = c.id
+            GROUP BY c.id
+            ORDER BY c.started_at
             """
         ).fetchall()
 
@@ -133,5 +251,53 @@ class DatabaseQueries:
             ORDER BY first_seen
             """,
             (mac_bssid,)
+        ).fetchall()
+
+    # --------------------------------------------------
+    # AUTHENTICATION HISTORY
+    # --------------------------------------------------
+
+    def get_auth_history(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT
+                o.auth_mode,
+                MIN(o.observed_at) AS first_seen,
+                MAX(o.observed_at) AS last_seen,
+                COUNT(*) AS observations
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+              AND o.auth_mode IS NOT NULL
+              AND o.auth_mode != ''
+            GROUP BY o.auth_mode
+            ORDER BY first_seen
+            """,
+            (mac_bssid,)
+        ).fetchall()
+
+    # --------------------------------------------------
+    # ACCESS POINTS SEEN IN BOTH CAPTURES
+    # --------------------------------------------------
+
+    def get_access_points_in_both_captures(self, capture_id_1, capture_id_2):
+        return self.db.conn.execute(
+            """
+            SELECT
+                ap.id,
+                ap.mac_bssid,
+                ap.type
+            FROM access_points ap
+            JOIN observations o1
+                ON o1.access_point_id = ap.id
+            JOIN observations o2
+                ON o2.access_point_id = ap.id
+            WHERE o1.capture_id = ?
+              AND o2.capture_id = ?
+            GROUP BY ap.id
+            ORDER BY ap.mac_bssid
+            """,
+            (capture_id_1, capture_id_2)
         ).fetchall()
 

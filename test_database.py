@@ -1,54 +1,50 @@
 from database.database import Database
-from importers.bruce import read_bruce_csv
+from database.queries import DatabaseQueries
+from database.analysis import DatabaseAnalysis
 
 
 db = Database()
+queries = DatabaseQueries(db)
+analysis = DatabaseAnalysis(queries)
 
-try:
-    result1 = db.import_capture(
-        "logs/260808_065121_wardriving.csv",
-        read_bruce_csv
-    )
+mac = "14:49:BC:9D:E3:BA"
 
-    print("File 1:")
-    print(result1)
+print("\nACCESS POINT SUMMARY")
+summary = analysis.get_access_point_summary(mac)
 
-    result2 = db.import_capture(
-        "logs/260808_064957_wardriving.csv",
-        read_bruce_csv
-    )
+for key, value in summary.items():
+    print(f"{key}: {value}")
 
-    print("\nFile 2:")
-    print(result2)
 
-    result3 = db.import_capture(
-        "logs/260808_065121_wardriving.copy.csv",
-        read_bruce_csv
-    )
+print("\nSSID CHANGES")
+for change in analysis.get_ssid_changes(mac):
+    print(change)
 
-    print("\nFile 3:")
-    print(result3)
 
-    # --------------------------------------------------
-    # DATABASE COUNTS
-    # --------------------------------------------------
+print("\nAUTHENTICATION CHANGES")
+for change in analysis.get_auth_changes(mac):
+    print(change)
 
-    access_points = db.conn.execute(
-        "SELECT COUNT(*) FROM access_points"
-    ).fetchone()[0]
 
-    observations = db.conn.execute(
-        "SELECT COUNT(*) FROM observations"
-    ).fetchone()[0]
+print("\nLOCATION HISTORY")
+for location in analysis.get_location_history(mac):
+    print(location)
 
-    captures = db.conn.execute(
-        "SELECT COUNT(*) FROM captures"
-    ).fetchone()[0]
 
-    print("\nDatabase totals:")
-    print(f"Access points: {access_points}")
-    print(f"Observations: {observations}")
-    print(f"Captures: {captures}")
+print("\nCHANNEL HISTORY")
+for channel in analysis.get_channel_history(mac):
+    print(channel)
 
-finally:
-    db.close()
+
+print("\nRSSI HISTORY")
+for rssi in analysis.get_rssi_history(mac):
+    print(rssi)
+
+
+print("\nCAPTURE HISTORY")
+for capture in analysis.get_capture_history(mac):
+    print(capture)
+
+
+db.close()
+

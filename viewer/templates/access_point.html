@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Access Point - {{ summary["access_point"]["mac_bssid"] }}{% endblock %}
+
+{% block content %}
+
+<h1>Access Point</h1>
+
+<div class="stat">
+    <h2>BSSID</h2>
+    <p>{{ summary["access_point"]["mac_bssid"] }}</p>
+</div>
+
+<div class="stat">
+    <h2>Type</h2>
+    <p>{{ summary["access_point"]["type"] }}</p>
+</div>
+
+<div class="stat">
+    <h2>Observations</h2>
+    <p>{{ summary["observation_count"] }}</p>
+</div>
+
+<div class="stat">
+    <h2>First Seen</h2>
+    <p>{{ summary["first_seen"] }}</p>
+</div>
+
+<div class="stat">
+    <h2>Last Seen</h2>
+    <p>{{ summary["last_seen"] }}</p>
+</div>
+
+<h2>SSIDs</h2>
+
+<ul>
+    {% for ssid in summary["ssids"] %}
+        <li>{{ ssid }}</li>
+    {% else %}
+        <li>No SSIDs recorded.</li>
+    {% endfor %}
+</ul>
+
+<h2>Authentication</h2>
+
+<ul>
+    {% for auth in summary["auth_modes"] %}
+        <li>{{ auth }}</li>
+    {% else %}
+        <li>No authentication data recorded.</li>
+    {% endfor %}
+</ul>
+
+<h2>Changes</h2>
+
+<p>
+    SSID changed:
+    {% if summary["ssid_changed"] %}
+        Yes
+    {% else %}
+        No
+    {% endif %}
+</p>
+
+<p>
+    Authentication changed:
+    {% if summary["auth_changed"] %}
+        Yes
+    {% else %}
+        No
+    {% endif %}
+</p>
+
+<h2>Observations</h2>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>Time</th>
+            <th>SSID</th>
+            <th>Auth</th>
+            <th>Channel</th>
+            <th>RSSI</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+            <th>Capture</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for observation in observations %}
+
+        <tr>
+            <td>{{ observation["observed_at"] }}</td>
+            <td>{{ observation["ssid"] }}</td>
+            <td>{{ observation["auth_mode"] }}</td>
+            <td>{{ observation["channel"] }}</td>
+            <td>{{ observation["rssi"] }}</td>
+            <td>{{ observation["latitude"] }}</td>
+            <td>{{ observation["longitude"] }}</td>
+            <td>{{ observation["capture_filename"] }}</td>
+        </tr>
+
+        {% else %}
+
+        <tr>
+            <td colspan="8">No observations found.</td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}

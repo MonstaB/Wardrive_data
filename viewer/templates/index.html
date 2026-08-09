@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Wardrive Viewer{% endblock %}
+
+{% block content %}
+
+<h1>Wardrive Dashboard</h1>
+
+<div class="stat">
+    <h2>Access Points</h2>
+    <p>{{ access_point_count }}</p>
+</div>
+
+<div class="stat">
+    <h2>Observations</h2>
+    <p>{{ observation_count }}</p>
+</div>
+
+<div class="stat">
+    <h2>Captures</h2>
+    <p>{{ capture_count }}</p>
+</div>
+
+<h2>Captures</h2>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Filename</th>
+            <th>Started</th>
+            <th>Ended</th>
+            <th>Observations</th>
+            <th>Imported</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for capture in captures %}
+
+        <tr>
+            <td>
+                <a href="{{ url_for('viewer.capture_detail', capture_id=capture['id']) }}">
+                    {{ capture["id"] }}
+                </a>
+            </td>
+
+            <td>
+                <a href="{{ url_for('viewer.capture_detail', capture_id=capture['id']) }}">
+                    {{ capture["filename"] }}
+                </a>
+            </td>
+
+            <td>{{ capture["started_at"] }}</td>
+
+            <td>{{ capture["ended_at"] }}</td>
+
+            <td>{{ capture["observation_count"] }}</td>
+
+            <td>{{ capture["imported_at"] }}</td>
+        </tr>
+
+        {% else %}
+
+        <tr>
+            <td colspan="6">No captures found.</td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}

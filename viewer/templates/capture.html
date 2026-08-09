@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Capture {{ capture["id"] }} - Wardrive Viewer{% endblock %}
+
+{% block content %}
+
+<h1>Capture {{ capture["id"] }}</h1>
+
+<h2>{{ capture["filename"] }}</h2>
+
+<table>
+
+    <tr>
+        <th>Started</th>
+        <td>{{ capture["started_at"] }}</td>
+    </tr>
+
+    <tr>
+        <th>Ended</th>
+        <td>{{ capture["ended_at"] }}</td>
+    </tr>
+
+    <tr>
+        <th>Imported</th>
+        <td>{{ capture["imported_at"] }}</td>
+    </tr>
+
+    <tr>
+        <th>File Hash</th>
+        <td>{{ capture["file_hash"] }}</td>
+    </tr>
+
+</table>
+
+<h2>Observations</h2>
+
+<table>
+
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>BSSID</th>
+            <th>SSID</th>
+            <th>Type</th>
+            <th>Auth</th>
+            <th>Time</th>
+            <th>Channel</th>
+            <th>Frequency</th>
+            <th>RSSI</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for observation in observations %}
+
+        <tr>
+
+            <td>{{ observation["id"] }}</td>
+
+            <td>
+                <a href="{{ url_for('viewer.access_point', mac_bssid=observation['mac_bssid']) }}">
+                    {{ observation["mac_bssid"] }}
+                </a>
+            </td>
+
+            <td>{{ observation["ssid"] }}</td>
+
+            <td>{{ observation["type"] }}</td>
+
+            <td>{{ observation["auth_mode"] }}</td>
+
+            <td>{{ observation["observed_at"] }}</td>
+
+            <td>{{ observation["channel"] }}</td>
+
+            <td>{{ observation["frequency"] }}</td>
+
+            <td>{{ observation["rssi"] }}</td>
+
+            <td>{{ observation["latitude"] }}</td>
+
+            <td>{{ observation["longitude"] }}</td>
+
+        </tr>
+
+        {% else %}
+
+        <tr>
+            <td colspan="11">No observations found.</td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% endblock %}
