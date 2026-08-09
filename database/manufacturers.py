@@ -1,12 +1,16 @@
-from mactools import MacAddress
+from mac_vendor_lookup import MacLookup
 
 
-def get_manufacturer(mac_bssid):
-    if not mac_bssid:
-        return None
+class ManufacturerLookup:
 
-    try:
-        mac = MacAddress(mac_bssid)
-        return mac.vendor
-    except Exception:
-        return None
+    def __init__(self):
+        self.lookup = MacLookup()
+
+    def get(self, mac_bssid):
+        if not mac_bssid:
+            return "Unknown"
+
+        try:
+            return self.lookup.lookup(mac_bssid)
+        except Exception:
+            return "Unknown"

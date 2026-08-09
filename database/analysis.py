@@ -1,9 +1,12 @@
 # analysis.py
+from database.manufacturers import ManufacturerLookup
+
 
 class DatabaseAnalysis:
 
     def __init__(self, queries):
         self.queries = queries
+        self.manufacturers = ManufacturerLookup()
 
     # --------------------------------------------------
     # ACCESS POINT
@@ -192,13 +195,6 @@ class DatabaseAnalysis:
     # --------------------------------------------------
 
     def get_manufacturer(self, mac_bssid):
-        try:
-            from mac_vendor_lookup import MacLookup
-
-            mac = MacLookup()
-            return mac.lookup(mac_bssid)
-
-        except Exception:
-            return "Unknown"
+        return self.manufacturers.get(mac_bssid)
 
 

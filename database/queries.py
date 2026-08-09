@@ -199,9 +199,37 @@ class DatabaseQueries:
     # OBSERVATIONS IN CAPTURE
     # --------------------------------------------------
 
-    def get_capture_observations(self, capture_id):
-        return self.db.conn.execute(
-            """
+    def get_capture_observations(
+            self,
+            capture_id,
+            limit=None,
+            offset=0,
+            channel=None,
+            device_type=None,
+            auth=None,
+            manufacturer=None,
+            sort="observed_at",
+            direction="asc"
+    ):
+        sort_columns = {
+            "bssid": "ap.mac_bssid",
+            "ssid": "o.ssid",
+            "type": "ap.type",
+            "auth": "o.auth_mode",
+            "channel": "o.channel",
+            "frequency": "o.frequency",
+            "rssi": "o.rssi",
+            "observed_at": "o.observed_at"
+        }
+
+        sort_column = sort_columns.get(
+            sort,
+            "o.observed_at"
+        )
+
+        direction = ("DESC" if direction.lower() == "desc" else "ASC")
+
+        query = """
             SELECT
                 o.*,
                 ap.mac_bssid,
@@ -210,9 +238,47 @@ class DatabaseQueries:
             JOIN access_points ap
                 ON ap.id = o.access_point_id
             WHERE o.capture_id = ?
-            ORDER BY o.observed_at
-            """,
-            (capture_id,)
+        """
+
+        params = [capture_id]
+
+        if channel:
+            query += """
+                AND o.channel = ?
+            """
+            params.append(channel)
+
+        if device_type:
+            query += """
+                AND ap.type = ?
+            """
+            params.append(device_type)
+
+        if auth:
+            query += """
+                AND o.auth_mode = ?
+            """
+            params.append(auth)
+
+#        if manufacturer:
+#            query += """
+#                AND ap.mac_bssid LIKE ?
+#            """
+#            params.append(manufacturer)
+
+        query += f"""
+            ORDER BY {sort_column} {direction}
+        """
+
+        if limit is not None:
+            query += """
+                LIMIT ? OFFSET ?
+            """
+            params.extend([limit, offset])
+
+        return self.db.conn.execute(
+            query,
+            params
         ).fetchall()
 
     # --------------------------------------------------
@@ -323,5 +389,103 @@ class DatabaseQueries:
             ORDER BY ap.mac_bssid
             """,
             (capture_id_1, capture_id_2)
+        ).fetchall()
+
+# --------------------------------------------------
+# CAPTURE OBSERVATION COUNT
+# --------------------------------------------------
+
+    def get_capture_observation_count(
+        self,
+        capture_id,
+        channel=None,
+        device_type=None,
+        auth=None
+    ):
+        query = """
+            SELECT COUNT(*) AS count
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE o.capture_id = ?
+        """
+
+        params = [capture_id]
+
+        if channel:
+            query += """
+                AND o.channel = ?
+            """
+            params.append(channel)
+
+        if device_type:
+            query += """
+                AND ap.type = ?
+            """
+            params.append(device_type)
+
+        if auth:
+            query += """
+                AND o.auth_mode = ?
+            """
+            params.append(auth)
+
+        return self.db.conn.execute(
+            query,
+            params
+        ).fetchone()["count"]
+
+# --------------------------------------------------
+# CAPTURE CHANNELS
+# --------------------------------------------------
+
+    def get_capture_channels(self, capture_id):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT channel
+            FROM observations
+            WHERE capture_id = ?
+              AND channel IS NOT NULL
+            ORDER BY channel
+            """,
+            (capture_id,)
+        ).fetchall()
+
+
+# --------------------------------------------------
+# CAPTURE TYPES
+# --------------------------------------------------
+
+    def get_capture_types(self, capture_id):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT ap.type
+            FROM observations o
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE o.capture_id = ?
+                AND ap.type IS NOT NULL
+                AND ap.type != ''
+            ORDER BY ap.type
+            """,
+            (capture_id,)
+        ).fetchall()
+
+
+# --------------------------------------------------
+# CAPTURE AUTHENTICATION MODES
+# --------------------------------------------------
+
+    def get_capture_auth_modes(self, capture_id):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT auth_mode
+            FROM observations
+            WHERE capture_id = ?
+                AND auth_mode IS NOT NULL
+                AND auth_mode != ''
+            ORDER BY auth_mode
+            """,
+            (capture_id,)
         ).fetchall()
 

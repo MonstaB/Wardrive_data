@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template
 from database.database import Database
 from database.queries import DatabaseQueries
 from database.analysis import DatabaseAnalysis
 from importers.bruce import read_bruce_csv
+from flask import Blueprint, render_template, request
 
 viewer = Blueprint(
     "viewer",
@@ -52,7 +52,64 @@ def capture_detail(capture_id):
         db.close()
         return "Capture not found", 404
 
-    observations = queries.get_capture_observations(capture_id)
+    # ----------------------------------------------
+    # FILTERS
+    # ----------------------------------------------
+
+    channel = request.args.get("channel", "").strip()
+    device_type = request.args.get("type", "").strip()
+    auth = request.args.get("auth", "").strip()
+
+    # ----------------------------------------------
+    # SORTING
+    # ----------------------------------------------
+
+    sort = request.args.get("sort", "observed_at")
+
+    direction = request.args.get("direction", "asc")
+
+    # ----------------------------------------------
+    # PAGINATION
+    # ----------------------------------------------
+
+    page = request.args.get("page", 1, type=int)
+
+    per_page = 100
+
+    if page < 1:
+        page = 1
+
+    total = queries.get_capture_observation_count(
+        capture_id,
+        channel=channel or None,
+        device_type=device_type or None,
+        auth=auth or None
+    )
+
+    pages = (total + per_page - 1) // per_page
+
+    if pages == 0:
+        pages = 1
+
+    if page > pages:
+        page = pages
+
+    offset = (page - 1) * per_page
+
+    observations = queries.get_capture_observations(
+        capture_id,
+        limit=per_page,
+        offset=offset,
+        channel=channel or None,
+        device_type=device_type or None,
+        auth=auth or None,
+        sort=sort,
+        direction=direction
+    )
+
+    # ----------------------------------------------
+    # MANUFACTURERS
+    # ----------------------------------------------
 
     manufacturers = {}
 
@@ -62,13 +119,33 @@ def capture_detail(capture_id):
         if mac not in manufacturers:
             manufacturers[mac] = analysis.get_manufacturer(mac)
 
+    # ----------------------------------------------
+    # FILTER OPTIONS
+    # ----------------------------------------------
+
+    channels = queries.get_capture_channels(capture_id)
+    device_types = queries.get_capture_types(capture_id)
+    auth_modes = queries.get_capture_auth_modes(capture_id)
+
     db.close()
 
     return render_template(
         "capture.html",
         capture=capture,
         observations=observations,
-        manufacturers=manufacturers
+        manufacturers=manufacturers,
+        channels=channels,
+        device_types=device_types,
+        auth_modes=auth_modes,
+        selected_channel=channel,
+        selected_type=device_type,
+        selected_auth=auth,
+        sort=sort,
+        direction=direction,
+        page=page,
+        per_page=per_page,
+        pages=pages,
+        total=total
     )
 
 

@@ -1,104 +1,442 @@
 {% extends "base.html" %}
 
-{% block title %}Capture {{ capture["id"] }} - Wardrive Viewer{% endblock %}
+{% block title %}Capture - {{ capture["filename"] }}{% endblock %}
 
 {% block content %}
 
-<h1>Capture {{ capture["id"] }}</h1>
+<h1>Capture</h1>
 
-<h2>{{ capture["filename"] }}</h2>
+<p>
+    <strong>Filename:</strong>
+    {{ capture["filename"] }}
+</p>
+
+<p>
+    <strong>Observations:</strong>
+    {{ total }}
+</p>
+
+<!-- -------------------------------------------------- -->
+
+<!-- FILTERS -->
+
+<!-- -------------------------------------------------- -->
+
+<form method="get">
+
+
+<label for="channel">Channel</label>
+
+<select name="channel" id="channel">
+    <option value="">All</option>
+
+    {% for row in channels %}
+        <option value="{{ row['channel'] }}"
+            {% if selected_channel == row['channel']|string %}
+                selected
+            {% endif %}>
+            {{ row['channel'] }}
+        </option>
+    {% endfor %}
+</select>
+
+
+<label for="type">Type</label>
+
+<select name="type" id="type">
+    <option value="">All</option>
+
+    {% for row in device_types %}
+        <option value="{{ row['type'] }}"
+            {% if selected_type == row['type'] %}
+                selected
+            {% endif %}>
+            {{ row['type'] }}
+        </option>
+    {% endfor %}
+</select>
+
+
+<label for="auth">Authentication</label>
+
+<select name="auth" id="auth">
+    <option value="">All</option>
+
+    {% for row in auth_modes %}
+        <option value="{{ row['auth_mode'] }}"
+            {% if selected_auth == row['auth_mode'] %}
+                selected
+            {% endif %}>
+            {{ row['auth_mode'] }}
+        </option>
+    {% endfor %}
+</select>
+
+
+<button type="submit">
+    Filter
+</button>
+
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id']
+) }}">
+    Clear
+</a>
+
+
+</form>
+
+<!-- -------------------------------------------------- -->
+
+<!-- SORTING -->
+
+<!-- -------------------------------------------------- -->
+
+<p>
+    Sort by:
+
+```
+{% set next_direction = "desc" if sort == "bssid" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='bssid',
+    direction=next_direction
+) }}">
+    BSSID
+    {% if sort == "bssid" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "ssid" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='ssid',
+    direction=next_direction
+) }}">
+    SSID
+    {% if sort == "ssid" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "type" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='type',
+    direction=next_direction
+) }}">
+    Type
+    {% if sort == "type" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "auth" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='auth',
+    direction=next_direction
+) }}">
+    Authentication
+    {% if sort == "auth" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "channel" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='channel',
+    direction=next_direction
+) }}">
+    Channel
+    {% if sort == "channel" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "frequency" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='frequency',
+    direction=next_direction
+) }}">
+    Frequency
+    {% if sort == "frequency" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "rssi" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='rssi',
+    direction=next_direction
+) }}">
+    RSSI
+    {% if sort == "rssi" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+
+|
+
+{% set next_direction = "desc" if sort == "observed_at" and direction == "asc" else "asc" %}
+<a href="{{ url_for(
+    'viewer.capture_detail',
+    capture_id=capture['id'],
+    channel=selected_channel,
+    type=selected_type,
+    auth=selected_auth,
+    sort='observed_at',
+    direction=next_direction
+) }}">
+    Observed
+    {% if sort == "observed_at" %}
+        {% if direction == "asc" %}▲{% else %}▼{% endif %}
+    {% endif %}
+</a>
+```
+
+</p>
+
+
+<!-- -------------------------------------------------- -->
+
+<!-- OBSERVATIONS -->
+
+<!-- -------------------------------------------------- -->
 
 <table>
 
-    <tr>
-        <th>Started</th>
-        <td>{{ capture["started_at"] }}</td>
-    </tr>
+
+<thead>
 
     <tr>
-        <th>Ended</th>
-        <td>{{ capture["ended_at"] }}</td>
+
+        <th>BSSID</th>
+
+        <th>Manufacturer</th>
+
+        <th>Type</th>
+
+        <th>SSID</th>
+
+        <th>Authentication</th>
+
+        <th>Observed</th>
+
+        <th>Channel</th>
+
+        <th>Frequency</th>
+
+        <th>RSSI</th>
+
+        <th>Latitude</th>
+
+        <th>Longitude</th>
+
     </tr>
 
-    <tr>
-        <th>Imported</th>
-        <td>{{ capture["imported_at"] }}</td>
-    </tr>
+</thead>
+
+
+<tbody>
+
+    {% for observation in observations %}
 
     <tr>
-        <th>File Hash</th>
-        <td>{{ capture["file_hash"] }}</td>
+
+        <td>
+            <a href="{{ url_for(
+                'viewer.access_point',
+                mac_bssid=observation['mac_bssid']
+            ) }}">
+                {{ observation["mac_bssid"] }}
+            </a>
+        </td>
+
+        <td>
+            {{ manufacturers.get(
+                observation["mac_bssid"],
+                "Unknown"
+            ) }}
+        </td>
+
+        <td>
+            {{ observation["type"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["ssid"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["auth_mode"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["observed_at"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["channel"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["frequency"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["rssi"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["latitude"] or "" }}
+        </td>
+
+        <td>
+            {{ observation["longitude"] or "" }}
+        </td>
+
     </tr>
+
+    {% else %}
+
+    <tr>
+
+        <td colspan="11">
+            No observations found.
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+</tbody>
+
 
 </table>
 
-<h2>Observations</h2>
+<!-- -------------------------------------------------- -->
 
-<table>
+<!-- PAGINATION -->
 
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>BSSID</th>
-            <th>SSID</th>
-            <th>Manufacturer</th>
-            <th>Type</th>
-            <th>Auth</th>
-            <th>Time</th>
-            <th>Channel</th>
-            <th>Frequency</th>
-            <th>RSSI</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-        </tr>
-    </thead>
+<!-- -------------------------------------------------- -->
 
-    <tbody>
+{% if pages > 1 %}
 
-        {% for observation in observations %}
+<p>
 
-        <tr>
 
-            <td>{{ observation["id"] }}</td>
+{% if page > 1 %}
 
-            <td>
-                <a href="{{ url_for('viewer.access_point', mac_bssid=observation['mac_bssid']) }}">
-                    {{ observation["mac_bssid"] }}
-                </a>
-            </td>
+    <a href="{{ url_for(
+        'viewer.capture_detail',
+        capture_id=capture['id'],
+        page=page - 1,
+        channel=selected_channel,
+        type=selected_type,
+        auth=selected_auth,
+        sort=sort,
+        direction=direction
+    ) }}">
+        Previous
+    </a>
 
-            <td>{{ observation["ssid"] }}</td>
+{% endif %}
 
-            <td>{{ manufacturers[observation["mac_bssid"]] }}</td>
 
-            <td>{{ observation["type"] }}</td>
+{% for page_number in range(1, pages + 1) %}
 
-            <td>{{ observation["auth_mode"] }}</td>
+    {% if page_number == page %}
 
-            <td>{{ observation["observed_at"] }}</td>
+        <strong>
+            {{ page_number }}
+        </strong>
 
-            <td>{{ observation["channel"] }}</td>
+    {% else %}
 
-            <td>{{ observation["frequency"] }}</td>
+        <a href="{{ url_for(
+            'viewer.capture_detail',
+            capture_id=capture['id'],
+            page=page_number,
+            channel=selected_channel,
+            type=selected_type,
+            auth=selected_auth,
+            sort=sort,
+            direction=direction
+        ) }}">
+            {{ page_number }}
+        </a>
 
-            <td>{{ observation["rssi"] }}</td>
+    {% endif %}
 
-            <td>{{ observation["latitude"] }}</td>
+{% endfor %}
 
-            <td>{{ observation["longitude"] }}</td>
 
-        </tr>
+{% if page < pages %}
 
-        {% else %}
+    <a href="{{ url_for(
+        'viewer.capture_detail',
+        capture_id=capture['id'],
+        page=page + 1,
+        channel=selected_channel,
+        type=selected_type,
+        auth=selected_auth,
+        sort=sort,
+        direction=direction
+    ) }}">
+        Next
+    </a>
 
-        <tr>
-            <td colspan="11">No observations found.</td>
-        </tr>
+{% endif %}
 
-        {% endfor %}
 
-    </tbody>
+</p>
 
-</table>
+{% endif %}
 
 {% endblock %}
