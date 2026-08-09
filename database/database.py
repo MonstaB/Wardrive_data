@@ -1,14 +1,12 @@
-# database.py
+# database/database.py
+
 import sqlite3
 import hashlib
-import csv
 from pathlib import Path
 from datetime import datetime
 
-
 DB_NAME = Path(__file__).resolve().parent.parent / "wardriving.db"
 DATABASE_VERSION = 1
-CAPTURES_FOLDER = "./logs"
 
 
 class Database:
@@ -136,8 +134,6 @@ class Database:
     # --------------------------------------------------
 
     def capture_exists(self, file_hash):
-        """Return True if this exact file has already been imported."""
-
         return self.conn.execute(
             """
             SELECT id, filename, imported_at
@@ -148,19 +144,141 @@ class Database:
         ).fetchone()
 
     # --------------------------------------------------
+    # CREATE CAPTURE
+    # --------------------------------------------------
+
+    def create_capture(
+        self,
+        filename,
+        started_at,
+        ended_at,
+        file_hash
+    ):
+        imported_at = datetime.utcnow().isoformat()
+
+        cursor = self.conn.execute(
+            """
+            INSERT INTO captures (
+                filename,
+                started_at,
+                ended_at,
+                imported_at,
+                file_hash
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                filename,
+                started_at,
+                ended_at,
+                imported_at,
+                file_hash
+            )
+        )
+
+        return cursor.lastrowid
+
+    # --------------------------------------------------
+    # GET OR CREATE ACCESS POINT
+    # --------------------------------------------------
+
+    def get_or_create_access_point(self, mac_bssid, ap_type):
+        access_point = self.conn.execute(
+            """
+            SELECT id
+            FROM access_points
+            WHERE mac_bssid = ?
+            """,
+            (mac_bssid,)
+        ).fetchone()
+
+        if access_point:
+            return access_point["id"]
+
+        cursor = self.conn.execute(
+            """
+            INSERT INTO access_points (
+                mac_bssid,
+                type
+            )
+            VALUES (?, ?)
+            """,
+            (
+                mac_bssid,
+                ap_type
+            )
+        )
+
+        return cursor.lastrowid
+
+    # --------------------------------------------------
+    # ADD OBSERVATION
+    # --------------------------------------------------
+
+    def add_observation(
+        self,
+        access_point_id,
+        capture_id,
+        observation
+    ):
+        self.conn.execute(
+            """
+            INSERT INTO observations (
+                access_point_id,
+                capture_id,
+                ssid,
+                auth_mode,
+                observed_at,
+                channel,
+                frequency,
+                rssi,
+                latitude,
+                longitude,
+                altitude,
+                accuracy,
+                rcois,
+                mfgrid
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                access_point_id,
+                capture_id,
+                observation["ssid"],
+                observation["auth_mode"],
+                observation["observed_at"],
+                observation["channel"],
+                observation["frequency"],
+                observation["rssi"],
+                observation["latitude"],
+                observation["longitude"],
+                observation["altitude"],
+                observation["accuracy"],
+                observation["rcois"],
+                observation["mfgrid"]
+            )
+        )
+
+    # --------------------------------------------------
     # IMPORT CAPTURE
     # --------------------------------------------------
 
-    def import_capture(self, path):
+    def import_capture(self, path, importer):
         path = Path(path)
 
         if not path.exists():
             raise FileNotFoundError(path)
 
-        # Calculate SHA-256 before importing anything
+        # ----------------------------------------------
+        # HASH FILE
+        # ----------------------------------------------
+
         digest = self.file_hash(path)
 
-        # Check whether this exact file has already been imported
+        # ----------------------------------------------
+        # CHECK DUPLICATE
+        # ----------------------------------------------
+
         existing = self.capture_exists(digest)
 
         if existing:
@@ -170,160 +288,62 @@ class Database:
                 "reason": "already_imported"
             }
 
-        observations = []
+        # ----------------------------------------------
+        # READ FILE USING IMPORTER
+        # ----------------------------------------------
 
-        with open(path, "r", encoding="utf-8", errors="replace", newline="") as f:
-            reader = csv.reader(f)
+        data = importer(path)
 
-            # First row = Bruce metadata
-            metadata = next(reader, None)
-
-            # Second row = column headers
-            headers = next(reader, None)
-
-            if headers is None:
-                raise ValueError("CSV does not contain a header row.")
-
-            expected_headers = [
-                "MAC",
-                "SSID",
-                "AuthMode",
-                "FirstSeen",
-                "Channel",
-                "Frequency",
-                "RSSI",
-                "CurrentLatitude",
-                "CurrentLongitude",
-                "AltitudeMeters",
-                "AccuracyMeters",
-                "RCOIs",
-                "MfgrId",
-                "Type"
-            ]
-
-            if headers != expected_headers:
-                raise ValueError(
-                    f"Unexpected CSV headers: {headers}"
-                )
-
-            for row in reader:
-                if not row:
-                    continue
-
-                if len(row) != len(headers):
-                    continue
-
-                data = dict(zip(headers, row))
-
-                observations.append(data)
+        observations = data["observations"]
 
         if not observations:
-            raise ValueError("CSV contains no observations.")
+            raise ValueError("Capture contains no observations.")
 
-        # Get capture times from the actual data
+        # ----------------------------------------------
+        # DETERMINE CAPTURE TIME
+        # ----------------------------------------------
+
         timestamps = [
-            row["FirstSeen"]
+            row["observed_at"]
             for row in observations
-            if row["FirstSeen"]
+            if row["observed_at"]
         ]
+
+        if not timestamps:
+            raise ValueError(
+                "Capture contains no observation timestamps."
+            )
 
         started_at = min(timestamps)
         ended_at = max(timestamps)
-        imported_at = datetime.utcnow().isoformat()
 
         try:
-            # Create capture
-            cursor = self.conn.execute(
-                """
-                INSERT INTO captures (
-                    filename,
-                    started_at,
-                    ended_at,
-                    imported_at,
-                    file_hash
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    path.name,
-                    started_at,
-                    ended_at,
-                    imported_at,
-                    digest
-                )
+            # ------------------------------------------
+            # CREATE CAPTURE
+            # ------------------------------------------
+
+            capture_id = self.create_capture(
+                filename=path.name,
+                started_at=started_at,
+                ended_at=ended_at,
+                file_hash=digest
             )
 
-            capture_id = cursor.lastrowid
+            # ------------------------------------------
+            # ADD OBSERVATIONS
+            # ------------------------------------------
 
-            # Import observations
-            for row in observations:
-                mac_bssid = row["MAC"].replace("\\:", ":")
+            for observation in observations:
 
-                access_point = self.conn.execute(
-                    """
-                    SELECT id
-                    FROM access_points
-                    WHERE mac_bssid = ?
-                    """,
-                    (mac_bssid,)
-                ).fetchone()
+                access_point_id = self.get_or_create_access_point(
+                    observation["mac_bssid"],
+                    observation["type"]
+                )
 
-                if access_point is None:
-                    cursor = self.conn.execute(
-                        """
-                        INSERT INTO access_points (
-                            mac_bssid,
-                            type
-                        )
-                        VALUES (?, ?)
-                        """,
-                        (
-                            mac_bssid,
-                            row["Type"]
-                        )
-                    )
-
-                    access_point_id = cursor.lastrowid
-
-                else:
-                    access_point_id = access_point["id"]
-
-                self.conn.execute(
-                    """
-                    INSERT INTO observations (
-                        access_point_id,
-                        capture_id,
-                        ssid,
-                        auth_mode,
-                        observed_at,
-                        channel,
-                        frequency,
-                        rssi,
-                        latitude,
-                        longitude,
-                        altitude,
-                        accuracy,
-                        rcois,
-                        mfgrid
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        access_point_id,
-                        capture_id,
-                        row["SSID"],
-                        row["AuthMode"],
-                        row["FirstSeen"],
-                        row["Channel"] or None,
-                        row["Frequency"] or None,
-                        row["RSSI"] or None,
-                        row["CurrentLatitude"] or None,
-                        row["CurrentLongitude"] or None,
-                        row["AltitudeMeters"] or None,
-                        row["AccuracyMeters"] or None,
-                        row["RCOIs"] or None,
-                        row["MfgrId"] or None
-                    )
+                self.add_observation(
+                    access_point_id=access_point_id,
+                    capture_id=capture_id,
+                    observation=observation
                 )
 
             self.conn.commit()
