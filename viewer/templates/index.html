@@ -6,6 +6,10 @@
 
 <h1>Wardrive Dashboard</h1>
 
+<form method="POST" action="{{ url_for('viewer.scan') }}">
+    <button type="submit">Scan Logs & Update Database</button>
+</form>
+
 <div class="stat">
     <h2>Access Points</h2>
     <p>{{ access_point_count }}</p>

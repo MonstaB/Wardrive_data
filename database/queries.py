@@ -44,6 +44,30 @@ class DatabaseQueries:
         ).fetchone()
 
     # --------------------------------------------------
+    # CAPTURES FOR ACCESS POINT
+    # --------------------------------------------------
+
+    def get_access_point_captures(self, mac_bssid):
+        return self.db.conn.execute(
+            """
+            SELECT DISTINCT
+                c.id,
+                c.filename,
+                c.started_at,
+                c.ended_at,
+                c.imported_at
+            FROM captures c
+            JOIN observations o
+                ON o.capture_id = c.id
+            JOIN access_points ap
+                ON ap.id = o.access_point_id
+            WHERE ap.mac_bssid = ?
+            ORDER BY c.started_at
+            """,
+            (mac_bssid,)
+        ).fetchall()
+
+    # --------------------------------------------------
     # SSIDS USED BY ACCESS POINT
     # --------------------------------------------------
 

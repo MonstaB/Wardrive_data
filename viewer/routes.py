@@ -2,6 +2,7 @@ from flask import Blueprint, render_template
 from database.database import Database
 from database.queries import DatabaseQueries
 from database.analysis import DatabaseAnalysis
+from importers.bruce import read_bruce_csv
 
 viewer = Blueprint(
     "viewer",
@@ -14,8 +15,6 @@ viewer = Blueprint(
 def index():
     db = Database()
     queries = DatabaseQueries(db)
-
-
     access_points = queries.get_all_access_points()
     captures = queries.get_all_captures()
 
@@ -78,4 +77,50 @@ def access_point(mac_bssid):
         "access_point.html",
         summary=summary,
         observations=observations
+    )
+
+
+@viewer.route("/scan", methods=["POST"])
+def scan():
+    import os
+
+    db = Database()
+
+    logs_folder = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "logs"
+    )
+
+    results = []
+
+    for filename in os.listdir(logs_folder):
+        if not filename.lower().endswith(".csv"):
+            continue
+
+        path = os.path.join(logs_folder, filename)
+
+        try:
+            result = db.import_capture(
+                path,
+                read_bruce_csv
+            )
+
+            results.append({
+                "filename": filename,
+                **result
+            })
+
+        except Exception as e:
+            results.append({
+                "filename": filename,
+                "imported": False,
+                "reason": "error",
+                "error": str(e)
+            })
+
+    db.close()
+
+    return render_template(
+        "scan.html",
+        results=results
     )
