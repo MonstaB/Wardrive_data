@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 
-DB_NAME = Path(__file__).resolve().parent / "wardriving.db"
+DB_NAME = Path(__file__).resolve().parent.parent / "wardriving.db"
 DATABASE_VERSION = 1
 CAPTURES_FOLDER = "./logs"
 
@@ -51,6 +51,7 @@ class Database:
                 access_point_id INTEGER NOT NULL,
                 capture_id INTEGER NOT NULL,
                 ssid TEXT,
+                auth_mode TEXT,
                 observed_at TEXT,
                 channel INTEGER,
                 frequency INTEGER,
@@ -137,16 +138,14 @@ class Database:
     def capture_exists(self, file_hash):
         """Return True if this exact file has already been imported."""
 
-        row = self.conn.execute(
+        return self.conn.execute(
             """
-            SELECT id
+            SELECT id, filename, imported_at
             FROM captures
             WHERE file_hash = ?
             """,
             (file_hash,)
         ).fetchone()
-
-        return row is not None
 
     # --------------------------------------------------
     # IMPORT CAPTURE
@@ -162,14 +161,7 @@ class Database:
         digest = self.file_hash(path)
 
         # Check whether this exact file has already been imported
-        existing = self.conn.execute(
-            """
-            SELECT id
-            FROM captures
-            WHERE file_hash = ?
-            """,
-            (digest,)
-        ).fetchone()
+        existing = self.capture_exists(digest)
 
         if existing:
             return {
@@ -239,105 +231,106 @@ class Database:
         ended_at = max(timestamps)
         imported_at = datetime.utcnow().isoformat()
 
-        # Create capture
-        cursor = self.conn.execute(
-            """
-            INSERT INTO captures (
-                filename,
-                started_at,
-                ended_at,
-                imported_at,
-                file_hash
-            )
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                path.name,
-                started_at,
-                ended_at,
-                imported_at,
-                digest
-            )
-        )
-
-        capture_id = cursor.lastrowid
-
-        # Import observations
-        for row in observations:
-
-            mac_bssid = row["MAC"].replace("\\:", ":")
-
-            # Find existing access point
-            access_point = self.conn.execute(
+        try:
+            # Create capture
+            cursor = self.conn.execute(
                 """
-                SELECT id
-                FROM access_points
-                WHERE mac_bssid = ?
-                """,
-                (mac_bssid,)
-            ).fetchone()
-
-            # Create access point if it doesn't exist
-            if access_point is None:
-                cursor = self.conn.execute(
-                    """
-                    INSERT INTO access_points (
-                        mac_bssid,
-                        type
-                    )
-                    VALUES (?, ?)
-                    """,
-                    (
-                        mac_bssid,
-                        row["Type"]
-                    )
+                INSERT INTO captures (
+                    filename,
+                    started_at,
+                    ended_at,
+                    imported_at,
+                    file_hash
                 )
-
-                access_point_id = cursor.lastrowid
-
-            else:
-                access_point_id = access_point["id"]
-
-            # Insert observation
-            self.conn.execute(
-                """
-                INSERT INTO observations (
-                    access_point_id,
-                    capture_id,
-                    ssid,
-                    auth_mode,
-                    observed_at,
-                    channel,
-                    frequency,
-                    rssi,
-                    latitude,
-                    longitude,
-                    altitude,
-                    accuracy,
-                    rcois,
-                    mfgrid
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 (
-                    access_point_id,
-                    capture_id,
-                    row["SSID"],
-                    row["AuthMode"],
-                    row["FirstSeen"],
-                    row["Channel"] or None,
-                    row["Frequency"] or None,
-                    row["RSSI"] or None,
-                    row["CurrentLatitude"] or None,
-                    row["CurrentLongitude"] or None,
-                    row["AltitudeMeters"] or None,
-                    row["AccuracyMeters"] or None,
-                    row["RCOIs"] or None,
-                    row["MfgrId"] or None
+                    path.name,
+                    started_at,
+                    ended_at,
+                    imported_at,
+                    digest
                 )
             )
 
-        self.conn.commit()
+            capture_id = cursor.lastrowid
+
+            # Import observations
+            for row in observations:
+                mac_bssid = row["MAC"].replace("\\:", ":")
+
+                access_point = self.conn.execute(
+                    """
+                    SELECT id
+                    FROM access_points
+                    WHERE mac_bssid = ?
+                    """,
+                    (mac_bssid,)
+                ).fetchone()
+
+                if access_point is None:
+                    cursor = self.conn.execute(
+                        """
+                        INSERT INTO access_points (
+                            mac_bssid,
+                            type
+                        )
+                        VALUES (?, ?)
+                        """,
+                        (
+                            mac_bssid,
+                            row["Type"]
+                        )
+                    )
+
+                    access_point_id = cursor.lastrowid
+
+                else:
+                    access_point_id = access_point["id"]
+
+                self.conn.execute(
+                    """
+                    INSERT INTO observations (
+                        access_point_id,
+                        capture_id,
+                        ssid,
+                        auth_mode,
+                        observed_at,
+                        channel,
+                        frequency,
+                        rssi,
+                        latitude,
+                        longitude,
+                        altitude,
+                        accuracy,
+                        rcois,
+                        mfgrid
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        access_point_id,
+                        capture_id,
+                        row["SSID"],
+                        row["AuthMode"],
+                        row["FirstSeen"],
+                        row["Channel"] or None,
+                        row["Frequency"] or None,
+                        row["RSSI"] or None,
+                        row["CurrentLatitude"] or None,
+                        row["CurrentLongitude"] or None,
+                        row["AltitudeMeters"] or None,
+                        row["AccuracyMeters"] or None,
+                        row["RCOIs"] or None,
+                        row["MfgrId"] or None
+                    )
+                )
+
+            self.conn.commit()
+
+        except Exception:
+            self.conn.rollback()
+            raise
 
         return {
             "id": capture_id,
@@ -345,4 +338,3 @@ class Database:
             "reason": "new_capture",
             "observations": len(observations)
         }
-
