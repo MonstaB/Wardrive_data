@@ -208,4 +208,3 @@ class Database:
             "imported": True,
             "reason": "new_capture"
         }
-
