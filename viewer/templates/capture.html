@@ -96,8 +96,7 @@
 <p>
     Sort by:
 
-```
-{% set next_direction = "desc" if sort == "bssid" and direction == "asc" else "asc" %}
+
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -105,17 +104,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='bssid',
-    direction=next_direction
+    direction='asc'
 ) }}">
     BSSID
-    {% if sort == "bssid" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "ssid" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -123,17 +118,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='ssid',
-    direction=next_direction
+    direction='asc'
 ) }}">
     SSID
-    {% if sort == "ssid" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "type" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -141,17 +132,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='type',
-    direction=next_direction
+    direction='asc'
 ) }}">
     Type
-    {% if sort == "type" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "auth" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -159,17 +146,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='auth',
-    direction=next_direction
+    direction='asc'
 ) }}">
     Authentication
-    {% if sort == "auth" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "channel" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -177,17 +160,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='channel',
-    direction=next_direction
+    direction='asc'
 ) }}">
     Channel
-    {% if sort == "channel" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "frequency" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -195,17 +174,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='frequency',
-    direction=next_direction
+    direction='asc'
 ) }}">
     Frequency
-    {% if sort == "frequency" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "rssi" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -213,17 +188,13 @@
     type=selected_type,
     auth=selected_auth,
     sort='rssi',
-    direction=next_direction
+    direction='asc'
 ) }}">
     RSSI
-    {% if sort == "rssi" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
 
 |
 
-{% set next_direction = "desc" if sort == "observed_at" and direction == "asc" else "asc" %}
 <a href="{{ url_for(
     'viewer.capture_detail',
     capture_id=capture['id'],
@@ -231,17 +202,12 @@
     type=selected_type,
     auth=selected_auth,
     sort='observed_at',
-    direction=next_direction
+    direction='asc'
 ) }}">
     Observed
-    {% if sort == "observed_at" %}
-        {% if direction == "asc" %}▲{% else %}▼{% endif %}
-    {% endif %}
 </a>
-```
-
+|
 </p>
-
 
 <!-- -------------------------------------------------- -->
 

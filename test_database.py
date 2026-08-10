@@ -1,18 +1,37 @@
-from mac_vendor_lookup import MacLookup
+from pathlib import Path
 
-lookup = MacLookup()
+from database.database import Database
+from database.scanner import DatabaseScanner
 
-macs = [
-    "00:0F:00:49:3E:5C",
-    "14:49:BC:9D:E3:BA",
-    "B4:63:6F:AE:4D:E9",
-    "34:98:B5:FB:73:47"
-]
+CSV_FILE = Path("logs/WigleWifi_20260807121018.csv")
 
-for mac in macs:
-    try:
-        manufacturer = lookup.lookup(mac)
-    except Exception as e:
-        manufacturer = f"ERROR: {e}"
+db = Database()
+scanner = DatabaseScanner(db)
 
-    print(mac, "|", manufacturer)
+print("FILE:")
+print(CSV_FILE)
+
+print()
+print("DETECTED IMPORTER:")
+
+importer = scanner.detect_importer(CSV_FILE)
+
+print(importer)
+print(importer.__name__)
+print(importer.__module__)
+
+print()
+print("TESTING IMPORTER DIRECTLY:")
+
+data = importer(CSV_FILE)
+
+print("SUCCESS")
+print("Observations:", len(data["observations"]))
+
+print()
+print("First observation:")
+
+for key, value in data["observations"][0].items():
+    print(f"{key}: {value}")
+
+db.close()

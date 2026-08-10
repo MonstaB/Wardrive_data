@@ -1,7 +1,7 @@
 from database.database import Database
 from database.queries import DatabaseQueries
 from database.analysis import DatabaseAnalysis
-from importers.bruce import read_bruce_csv
+from database.scanner import DatabaseScanner
 from flask import Blueprint, render_template, request
 
 viewer = Blueprint(
@@ -174,39 +174,13 @@ def scan():
 
     db = Database()
 
-    logs_folder = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "logs"
-    )
+    scanner = DatabaseScanner(db)
 
-    results = []
+    try:
+        results = scanner.scan_logs("logs")
 
-    for filename in os.listdir(logs_folder):
-        if not filename.lower().endswith(".csv"):
-            continue
-
-        path = os.path.join(logs_folder, filename)
-
-        try:
-            result = db.import_capture(
-                path,
-                read_bruce_csv
-            )
-
-            results.append({
-                "filename": filename,
-                **result
-            })
-
-        except Exception as e:
-            results.append({
-                "filename": filename,
-                "imported": False,
-                "reason": "error",
-                "error": str(e)
-            })
-
-    db.close()
+    finally:
+        db.close()
 
     return render_template(
         "scan.html",

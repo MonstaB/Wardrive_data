@@ -45,19 +45,19 @@
     }
 
     main {
-        max-width: 1400px;
-        margin: 30px auto;
-        padding: 0 20px;
+    width: 100%;
+    margin: 30px 0;
+    padding: 0 30px;
     }
 
     .stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
+    display: flex;
+    gap: 20px;
+    width: 100%;
     }
 
     .stat {
+        flex: 1;
         background: white;
         padding: 20px;
         border-radius: 8px;
@@ -86,13 +86,14 @@
     }
 
     table {
+        text-align: left;
         width: 100%;
         border-collapse: collapse;
     }
 
     th,
     td {
-        padding: 12px;
+        padding: 1px;
         text-align: left;
         border-bottom: 1px solid #ddd;
     }
@@ -109,20 +110,18 @@
         color: #0066cc;
     }
 </style>
-```
+
 
 </head>
 
 <body>
 
 <header>
-    <h1>Wardrive Viewer</h1>
+    <h1><nav>Wardrive Viewer  .<a href="/">Dashboard</a></nav></h1>
 
-```
-<nav>
-    <a href="/">Dashboard</a>
-</nav>
-```
+
+
+
 
 </header>
 

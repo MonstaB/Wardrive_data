@@ -69,7 +69,7 @@ def read_bruce_csv(path):
             # ----------------------------------------------
 
             observation = {
-                "mac_bssid": data["MAC"].replace("\\:", ":"),
+                "mac_bssid": data["MAC"].replace("\\:", ":").upper(),
                 "ssid": data["SSID"] or None,
                 "auth_mode": data["AuthMode"] or None,
                 "observed_at": data["FirstSeen"] or None,

@@ -9,22 +9,22 @@
 <form method="POST" action="{{ url_for('viewer.scan') }}">
     <button type="submit">Scan Logs & Update Database</button>
 </form>
+<div class="stats">
+    <div class="stat">
+        <h2>Access Points</h2>
+        <p>{{ access_point_count }}</p>
+    </div>
 
-<div class="stat">
-    <h2>Access Points</h2>
-    <p>{{ access_point_count }}</p>
+    <div class="stat">
+        <h2>Observations</h2>
+        <p>{{ observation_count }}</p>
+    </div>
+
+    <div class="stat">
+        <h2>Captures</h2>
+        <p>{{ capture_count }}</p>
+    </div>
 </div>
-
-<div class="stat">
-    <h2>Observations</h2>
-    <p>{{ observation_count }}</p>
-</div>
-
-<div class="stat">
-    <h2>Captures</h2>
-    <p>{{ capture_count }}</p>
-</div>
-
 <h2>Captures</h2>
 
 <table>

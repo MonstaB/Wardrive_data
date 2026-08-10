@@ -5,35 +5,36 @@
 {% block content %}
 
 <h1>Access Point</h1>
+<div class="stats">
+    <div class="stat">
+        <h2>BSSID</h2>
+        <p>{{ summary["access_point"]["mac_bssid"] }}</p>
+    </div>
 
-<div class="stat">
-    <h2>BSSID</h2>
-    <p>{{ summary["access_point"]["mac_bssid"] }}</p>
-</div>
+    <div class="stat">
+        <h2>Type</h2>
+        <p>{{ summary["access_point"]["type"] }}</p>
+    </div>
 
-<div class="stat">
-    <h2>Type</h2>
-    <p>{{ summary["access_point"]["type"] }}</p>
-</div>
+    <div class="stat">
+        <h2>Observations</h2>
+        <p>{{ summary["observation_count"] }}</p>
+    </div>
 
-<div class="stat">
-    <h2>Observations</h2>
-    <p>{{ summary["observation_count"] }}</p>
-</div>
+    <div class="stat">
+        <h2>First Seen</h2>
+        <p>{{ summary["first_seen"] }}</p>
+    </div>
 
-<div class="stat">
-    <h2>First Seen</h2>
-    <p>{{ summary["first_seen"] }}</p>
-</div>
+    <div class="stat">
+        <h2>Last Seen</h2>
+        <p>{{ summary["last_seen"] }}</p>
+    </div>
 
-<div class="stat">
-    <h2>Last Seen</h2>
-    <p>{{ summary["last_seen"] }}</p>
-</div>
-
-<div class="stat">
-    <h2>Manufacturer</h2>
-    <p>{{ manufacturer }}</p>
+    <div class="stat">
+        <h2>Manufacturer</h2>
+        <p>{{ manufacturer }}</p>
+    </div>
 </div>
 
 <h2>SSIDs</h2>
