@@ -2,6 +2,7 @@ from pathlib import Path
 
 from importers.bruce import read_bruce_csv
 from importers.wigle import read_wigle_csv
+from importers.porkchop import read_porkchop_csv
 
 
 class DatabaseScanner:
@@ -33,6 +34,13 @@ class DatabaseScanner:
 
         if "brand=Bruce" in metadata:
             return read_bruce_csv
+
+        # ----------------------------------------------
+        # PORKCHOP
+        # ----------------------------------------------
+
+        if "device=PORKCHOP" in metadata:
+            return read_porkchop_csv
 
         # ----------------------------------------------
         # WIGLE

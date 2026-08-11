@@ -3,7 +3,7 @@ from pathlib import Path
 from database.database import Database
 from database.scanner import DatabaseScanner
 
-CSV_FILE = Path("logs/WigleWifi_20260807121018.csv")
+CSV_FILE = Path("logs/warhog_20260811_050206.wigle.csv")
 
 db = Database()
 scanner = DatabaseScanner(db)
