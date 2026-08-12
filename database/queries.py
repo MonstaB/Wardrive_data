@@ -489,3 +489,276 @@ class DatabaseQueries:
             (capture_id,)
         ).fetchall()
 
+# --------------------------------------------------
+# ALL ACCESS POINTS
+# --------------------------------------------------
+
+    def get_access_points(
+        self,
+        limit=None,
+        offset=0,
+        device_type=None,
+        auth=None,
+        manufacturer=None,
+        search=None,
+        sort="bssid",
+        direction="asc"
+    ):
+        sort_columns = {
+            "bssid": "ap.mac_bssid",
+            "type": "ap.type",
+            "ssid": "last_observation.ssid",
+            "auth": "last_observation.auth_mode",
+            "first_seen": "first_seen",
+            "last_seen": "last_seen",
+            "observations": "observation_count",
+            "captures": "capture_count"
+            }
+
+        sort_column = sort_columns.get(
+            sort,
+            "ap.mac_bssid"
+        )
+
+        direction = direction.lower()
+
+        if direction not in ("asc", "desc"):
+            direction = "asc"
+
+        query = """
+            SELECT
+                ap.id,
+                ap.mac_bssid,
+                ap.type,
+        
+                last_observation.ssid,
+                last_observation.auth_mode,
+        
+                first_seen.first_seen,
+                last_seen.last_seen,
+        
+                COUNT(DISTINCT o.id) AS observation_count,
+                COUNT(DISTINCT o.capture_id) AS capture_count
+        
+            FROM access_points ap
+        
+            JOIN observations o
+                ON o.access_point_id = ap.id
+        
+            LEFT JOIN observations last_observation
+                ON last_observation.id = (
+                    SELECT o2.id
+                    FROM observations o2
+                    WHERE o2.access_point_id = ap.id
+                    ORDER BY o2.observed_at DESC, o2.id DESC
+                    LIMIT 1
+                )
+        
+            LEFT JOIN (
+                SELECT
+                    access_point_id,
+                    MIN(observed_at) AS first_seen
+                FROM observations
+                GROUP BY access_point_id
+            ) first_seen
+                ON first_seen.access_point_id = ap.id
+        
+            LEFT JOIN (
+                SELECT
+                    access_point_id,
+                    MAX(observed_at) AS last_seen
+                FROM observations
+                GROUP BY access_point_id
+            ) last_seen
+                ON last_seen.access_point_id = ap.id
+        
+            WHERE 1 = 1
+        """
+
+        params = []
+
+        if device_type:
+            query += """
+                AND ap.type = ?
+            """
+            params.append(device_type)
+
+        if auth:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM observations ao
+                    WHERE ao.access_point_id = ap.id
+                    AND ao.auth_mode = ?
+                )
+            """
+            params.append(auth)
+
+        if manufacturer:
+            query += """
+                AND ap.mac_bssid LIKE ?
+            """
+            params.append(manufacturer)
+
+        if search:
+            query += """
+                AND (
+                    ap.mac_bssid LIKE ?
+                    OR EXISTS (
+                        SELECT 1
+                        FROM observations so
+                        WHERE so.access_point_id = ap.id
+                        AND so.ssid LIKE ?
+                    )
+                )
+            """
+
+            search_value = f"%{search}%"
+
+            params.extend([
+                search_value,
+                search_value
+            ])
+
+        query += """
+            GROUP BY
+                ap.id,
+                ap.mac_bssid,
+                ap.type,
+                last_observation.ssid,
+                last_observation.auth_mode,
+                first_seen.first_seen,
+                last_seen.last_seen
+        """
+
+        query += f"""
+            ORDER BY {sort_column} {direction}
+        """
+
+        if limit is not None:
+            query += """
+                LIMIT ? OFFSET ?
+            """
+
+            params.extend([
+                limit,
+                offset
+            ])
+
+        return self.db.conn.execute(
+            query,
+            params
+        ).fetchall()
+
+    # --------------------------------------------------
+
+    # ACCESS POINT COUNT
+
+    # --------------------------------------------------
+
+    def get_access_point_count(
+            self,
+            device_type=None,
+            auth=None,
+            search=None
+    ):
+        query = """
+    SELECT COUNT(*)
+    FROM access_points ap
+    WHERE 1 = 1
+    """
+
+
+        params = []
+
+    # ----------------------------------------------
+    # TYPE
+    # ----------------------------------------------
+
+        if device_type:
+            query += """
+                AND ap.type = ?
+            """
+
+            params.append(device_type)
+
+    # ----------------------------------------------
+    # AUTHENTICATION
+    # ----------------------------------------------
+
+        if auth:
+            query += """
+                AND EXISTS (
+                    SELECT 1
+                    FROM observations o
+                    WHERE o.access_point_id = ap.id
+                    AND o.auth_mode = ?
+                )
+            """
+
+            params.append(auth)
+
+    # ----------------------------------------------
+    # SEARCH
+    # ----------------------------------------------
+
+        if search:
+            query += """
+                AND (
+                    ap.mac_bssid LIKE ?
+    
+                    OR EXISTS (
+                        SELECT 1
+                        FROM observations o
+                        WHERE o.access_point_id = ap.id
+                        AND o.ssid LIKE ?
+                    )
+                )
+            """
+
+            search_value = f"%{search}%"
+
+            params.append(search_value)
+            params.append(search_value)
+
+    # ----------------------------------------------
+    # EXECUTE
+    # ----------------------------------------------
+
+        return self.db.conn.execute(
+            query,
+            params
+        ).fetchone()[0]
+
+# --------------------------------------------------
+# ACCESS POINT TYPES
+# --------------------------------------------------
+
+    def get_all_access_point_types(self):
+        return self.db.conn.execute(
+        """
+        SELECT DISTINCT type
+        FROM access_points
+        WHERE type IS NOT NULL
+        AND type != ''
+        ORDER BY type
+        """
+        ).fetchall()
+
+    # --------------------------------------------------
+
+    # ALL AUTHENTICATION MODES
+
+    # --------------------------------------------------
+
+    def get_all_auth_modes(self):
+        return self.db.conn.execute(
+        """
+        SELECT DISTINCT auth_mode
+        FROM observations
+        WHERE auth_mode IS NOT NULL
+        AND auth_mode != ''
+        ORDER BY auth_mode
+        """
+        ).fetchall()
+

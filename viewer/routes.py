@@ -186,3 +186,133 @@ def scan():
         "scan.html",
         results=results
     )
+
+@viewer.route("/access-points")
+def access_points():
+
+
+    db = Database()
+    queries = DatabaseQueries(db)
+    analysis = DatabaseAnalysis(queries)
+
+# ----------------------------------------------
+# FILTERS
+# ----------------------------------------------
+
+    device_type = request.args.get(
+        "type",
+        ""
+    ).strip()
+
+    auth = request.args.get(
+        "auth",
+        ""
+    ).strip()
+
+    search = request.args.get(
+        "search",
+        ""
+    ).strip()
+
+# ----------------------------------------------
+# SORTING
+# ----------------------------------------------
+
+    sort = request.args.get(
+        "sort",
+        "bssid"
+    )
+
+    direction = request.args.get(
+        "direction",
+        "asc"
+    )
+
+# ----------------------------------------------
+# PAGINATION
+# ----------------------------------------------
+
+    page = request.args.get(
+        "page",
+        1,
+        type=int
+    )
+
+    per_page = 100
+
+    if page < 1:
+        page = 1
+
+    total = queries.get_access_point_count(
+        device_type=device_type or None,
+        auth=auth or None,
+        search=search or None
+    )
+
+    pages = (total + per_page - 1) // per_page
+
+    if pages == 0:
+        pages = 1
+
+    if page > pages:
+        page = pages
+
+    offset = (page - 1) * per_page
+
+    access_points = queries.get_access_points(
+        limit=per_page,
+        offset=offset,
+        device_type=device_type or None,
+        auth=auth or None,
+        search=search or None,
+        sort=sort,
+        direction=direction
+    )
+
+# ----------------------------------------------
+# MANUFACTURERS
+# ----------------------------------------------
+
+    manufacturers = {}
+
+    for access_point in access_points:
+
+        mac = access_point["mac_bssid"]
+
+        if mac not in manufacturers:
+            manufacturers[mac] = (
+                analysis.get_manufacturer(mac)
+            )
+
+# ----------------------------------------------
+# FILTER OPTIONS
+# ----------------------------------------------
+
+    device_types = queries.get_all_access_point_types()
+    auth_modes = queries.get_all_auth_modes()
+
+    db.close()
+
+    return render_template(
+        "access_points.html",
+
+        access_points=access_points,
+
+        manufacturers=manufacturers,
+
+        device_types=device_types,
+        auth_modes=auth_modes,
+
+        selected_type=device_type,
+        selected_auth=auth,
+        search=search,
+
+        sort=sort,
+        direction=direction,
+
+        page=page,
+        per_page=per_page,
+        pages=pages,
+        total=total
+    )
+
